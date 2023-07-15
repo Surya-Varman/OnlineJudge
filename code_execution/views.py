@@ -8,5 +8,5 @@ from django.http import HttpResponse
 
 def execute_code(request):
     if(request.method == "POST"):
-
+        pass
     return render(request, "code_execution/submit.html")
