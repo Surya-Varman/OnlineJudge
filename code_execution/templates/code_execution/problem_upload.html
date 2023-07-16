@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+</head>
+<body>
+    <form method="POST">
+        {%csrf_token%}
+        <input name= "problem_title" placeholder="problem title"/> <br/> <br/>
+        <textarea name = "problem_statement" placeholder="problem statement" rows="4" cols="50"> </textarea> <br/>
+        <input name = "problem_difficulty" placeholder="problem difficulty"/> <br/>
+        <input type="submit"/>
+    </form>
+</body>
+</html>
