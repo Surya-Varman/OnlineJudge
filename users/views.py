@@ -35,4 +35,4 @@ def logout_user(request):
         logout(request)
         return HttpResponse("logged out successfully")
     else:
-        return render(request, "users/logout.html")
+        return render(request, "users/logout.html", {"firstname": request.user.first_name})
