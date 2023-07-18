@@ -49,14 +49,21 @@ def execute_code(request):
             return HttpResponse("COMPILATION ERROR")
         else:
             testcases = TestCase.objects.filter(problem_id__problem_id=submission.problem.problem_id)
-            for testcase in testcases:
-                create_testcase_file(TESTCASE_PATH, testcase.testcase, compiler_dictionary)
-                code_output = subprocess.run(
-                    f"docker exec {compiler_dictionary['container']} sh -c \"{compiler_dictionary['execute']} < {compiler_dictionary['submission_id']}.txt \""
-                    , shell=True
-                    , capture_output=True
-                    ,text=True
-                )
+            for testcase_no, testcase in enumerate(testcases):
+                compiler_dictionary = create_testcase_file(TESTCASE_PATH, testcase.testcase, compiler_dictionary, testcase_no)
+                try:
+                    code_output = subprocess.run(
+                        f"docker exec {compiler_dictionary['container']} sh -c \"{compiler_dictionary['execute']} < {compiler_dictionary['testcase_name']} \""
+                        , shell=True
+                        , capture_output=True
+                        , text=True
+                        , timeout=5
+                    )
+                except subprocess.TimeoutExpired:
+                    submission.verdict = "TIME LIMIT EXCEEDED"
+                    submission.save()
+                    delete_docker_container(compiler_dictionary)
+                    return HttpResponse("TIME LIMIT EXCEEDED")
                 code_output = str(code_output.stdout)
                 if testcase.output.strip() != code_output.strip():
                     submission.verdict = "WRONG ANSWER"

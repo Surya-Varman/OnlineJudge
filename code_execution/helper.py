@@ -62,18 +62,20 @@ def docker_init(compiler_dictionary, code_folder_path):
     return compiler_dictionary
 
 
-def create_testcase_file(testcase_folder_path, testcase, compiler_dictionary):
+def create_testcase_file(testcase_folder_path, testcase, compiler_dictionary, testcase_number):
     if not os.path.exists(testcase_folder_path):
         os.makedirs(testcase_folder_path)
-    file_path = testcase_folder_path + f"/{compiler_dictionary['submission_id']}.txt"
+    file_path = testcase_folder_path + f"/{compiler_dictionary['submission_id']}{testcase_number}.txt"
+    compiler_dictionary['testcase_name'] = f"/{compiler_dictionary['submission_id']}{testcase_number}.txt"
     with open(file_path, "w") as fp:
         fp.write(testcase)
     # now copy the testcase file to the docker container:
     subprocess.run(
-        f"docker cp {file_path} {compiler_dictionary['container']}:/{compiler_dictionary['submission_id']}.txt",
+        f"docker cp {file_path} {compiler_dictionary['container']}:/{compiler_dictionary['testcase_name']}",
         shell=True)
     # after copying delete the current testcase file created
-    subprocess.run(f"rm {file_path}")
+    # subprocess.run(f"rm {file_path}", shell=True)
+    return compiler_dictionary
 
 
 def delete_docker_container(compiler_dictionary):
