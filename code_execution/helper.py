@@ -1,4 +1,5 @@
 import subprocess
+import os
 
 
 def get_extension(language):
@@ -53,13 +54,30 @@ def docker_init(compiler_dictionary, code_folder_path):
     subprocess.run(f"docker run --name {container} -dt {image}", shell=True)
 
     # copy the program files into the docker container
-    subprocess.run(f"docker cp {code_folder_path}/{compiler_dictionary['submission_id']}.{compiler_dictionary['extension']} {container}:/{compiler_dictionary['submission_id']}.{compiler_dictionary['extension']}", shell=True)
+    subprocess.run(
+        f"docker cp {code_folder_path}/{compiler_dictionary['submission_id']}.{compiler_dictionary['extension']} {container}:/{compiler_dictionary['submission_id']}.{compiler_dictionary['extension']}",
+        shell=True)
     compiler_dictionary['container'] = container
     compiler_dictionary['image'] = image
     return compiler_dictionary
 
 
-def delete_docker_container():
-    pass
+def create_testcase_file(testcase_folder_path, testcase, compiler_dictionary):
+    if not os.path.exists(testcase_folder_path):
+        os.makedirs(testcase_folder_path)
+    file_path = testcase_folder_path + f"/{compiler_dictionary['submission_id']}.txt"
+    with open(file_path, "w") as fp:
+        fp.write(testcase)
+    # now copy the testcase file to the docker container:
+    subprocess.run(
+        f"docker cp {file_path} {compiler_dictionary['container']}:/{compiler_dictionary['submission_id']}.txt",
+        shell=True)
+    # after copying delete the current testcase file created
+    subprocess.run(f"rm {file_path}")
 
 
+def delete_docker_container(compiler_dictionary):
+    # stop the running container
+    subprocess.run(f"docker stop {compiler_dictionary['container']}", shell=True)
+    # delete the container
+    subprocess.run(f"docker rm {compiler_dictionary['container']}", shell=True)

@@ -1,7 +1,7 @@
 from django.shortcuts import render
 from django.http import HttpResponse
 from code_execution.models import Problem as Problems, TestCase, Submission
-from code_execution.helper import compiler_details, get_extension, docker_init
+from code_execution.helper import compiler_details, get_extension, docker_init, create_testcase_file, delete_docker_container
 
 import os
 import subprocess
@@ -45,23 +45,28 @@ def execute_code(request):
         if compiler_dictionary['language'] != "PYTHON" and output.returncode != 0:
             submission.verdict = "COMPILATION ERROR"
             submission.save()
+            delete_docker_container(compiler_dictionary)
             return HttpResponse("COMPILATION ERROR")
         else:
             testcases = TestCase.objects.filter(problem_id__problem_id=submission.problem.problem_id)
             for testcase in testcases:
-                testcase_value = testcase.testcase.replace('\r\n', ' ')
+                create_testcase_file(TESTCASE_PATH, testcase.testcase, compiler_dictionary)
                 code_output = subprocess.run(
-                    f"docker exec {compiler_dictionary['container']} sh -c \"echo -e  \'{testcase_value}\' | {compiler_dictionary['execute']} \" ",
-                    shell=True, capture_output=True, text=True
+                    f"docker exec {compiler_dictionary['container']} sh -c \"{compiler_dictionary['execute']} < {compiler_dictionary['submission_id']}.txt \""
+                    , shell=True
+                    , capture_output=True
+                    ,text=True
                 )
                 code_output = str(code_output.stdout)
                 if testcase.output.strip() != code_output.strip():
                     submission.verdict = "WRONG ANSWER"
                     submission.save()
+                    delete_docker_container(compiler_dictionary)
                     return HttpResponse(f"WRONG ANSWER: EXPECTED: {testcase.output.strip()} RECEIVED: {code_output.strip()}")
 
             submission.verdict = "ACCEPTED"
             submission.save()
+            delete_docker_container(compiler_dictionary)
             return HttpResponse("ACCEPTED")
     else:
         return render(request, "code_execution/submit.html")
