@@ -1,17 +1,18 @@
 from django.shortcuts import render
 from django.http import HttpResponse
+from django.contrib import messages
 from code_execution.models import Problem as Problems, TestCase, Submission
 from code_execution.helper import compiler_details, get_extension, docker_init, create_testcase_file, delete_docker_container
-
+from django.db.models import Q
 import os
 import subprocess
 import docker
 import uuid
+import timeit
 
 FOLDER_PATH = os.getcwd() + "/codeFiles"
 OLD_PATH = os.getcwd()
-TESTCASE_PATH = os.getcwd()+"/testcases"
-
+TESTCASE_PATH = os.getcwd() + "/testcases"
 
 
 def execute_code(request):
@@ -38,7 +39,8 @@ def execute_code(request):
         compiler_dictionary = docker_init(compiler_dictionary, FOLDER_PATH)
 
         if compiler_dictionary['language'] != "PYTHON":
-            output = subprocess.run(f"docker exec {compiler_dictionary['container']} {compiler_dictionary['compile']}", shell=True)
+            output = subprocess.run(f"docker exec {compiler_dictionary['container']} {compiler_dictionary['compile']}",
+                                    shell=True)
         else:
             output = 0
 
@@ -50,14 +52,18 @@ def execute_code(request):
         else:
             testcases = TestCase.objects.filter(problem_id__problem_id=submission.problem.problem_id)
             for testcase_no, testcase in enumerate(testcases):
-                compiler_dictionary = create_testcase_file(TESTCASE_PATH, testcase.testcase, compiler_dictionary, testcase_no)
+                compiler_dictionary = create_testcase_file(TESTCASE_PATH, testcase.testcase, compiler_dictionary,
+                                                           testcase_no)
                 try:
+                    command = [
+                        "docker", "exec", compiler_dictionary['container'],
+                        "sh", "-c", f"{compiler_dictionary['execute']} < {compiler_dictionary['testcase_name']}"
+                    ]
                     code_output = subprocess.run(
-                        f"docker exec {compiler_dictionary['container']} sh -c \"{compiler_dictionary['execute']} < {compiler_dictionary['testcase_name']} \""
-                        , shell=True
-                        , capture_output=True
-                        , text=True
-                        , timeout=5
+                        command,
+                        capture_output=True,
+                        text=True,
+                        timeout=2
                     )
                 except subprocess.TimeoutExpired:
                     submission.verdict = "TIME LIMIT EXCEEDED"
@@ -65,11 +71,13 @@ def execute_code(request):
                     delete_docker_container(compiler_dictionary)
                     return HttpResponse("TIME LIMIT EXCEEDED")
                 code_output = str(code_output.stdout)
-                if testcase.output.strip() != code_output.strip():
+                ts_output = testcase.output.replace('\r\n', '\n')
+                if ts_output.strip() != code_output.strip():
                     submission.verdict = "WRONG ANSWER"
                     submission.save()
                     delete_docker_container(compiler_dictionary)
-                    return HttpResponse(f"WRONG ANSWER: EXPECTED: {testcase.output.strip()} RECEIVED: {code_output.strip()}")
+                    return HttpResponse(
+                        f"WRONG ANSWER: EXPECTED: {ts_output.strip()} RECEIVED: {code_output.strip()}")
 
             submission.verdict = "ACCEPTED"
             submission.save()
@@ -109,6 +117,30 @@ def upload_testcase(request):
         test_case.testcase = request.POST["testcase"]
         test_case.output = request.POST["output"]
         test_case.save()
+        messages.success(request, 'Problem submitted successfully!')
         return HttpResponse("Testcase added successfully")
     else:
         return render(request, "code_execution/upload_testcases.html")
+
+
+def show_problem(request):
+    problems = Problems.objects.all()
+    updated_problems = []
+    for problem in problems:
+        new_object = {'problem': problem}
+        if Submission.objects.filter(Q(problem__problem_id=problem.problem_id) & Q(verdict="ACCEPTED") & Q(
+                user__username=request.user.username)).exists():
+            new_object['status'] = "Solved"
+        elif Submission.objects.filter(
+                Q(problem__problem_id=problem.problem_id) & Q(user__username=request.user.username)).exists():
+            new_object['status'] = "Unsolved"
+        else:
+            new_object['status'] = "Unattempted"
+        updated_problems.append((new_object))
+    return render(request, "code_execution/problems.html", {"problems": updated_problems})
+
+
+def view_problem(request, problem_id):
+    problem = Problems.objects.get(problem_id=problem_id)
+    return render(request,"code_execution/problem_description.html", {"problem_title": problem.problem_title, "problem_description": problem.problem_statement, "problem_id":problem_id})
+

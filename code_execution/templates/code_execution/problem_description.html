@@ -1,0 +1,13 @@
+{% extends "users/base.html" %}
+{% block content %}
+  <div class="container mt-4">
+    <div class="row">
+      <div class="col-md-12">
+        <h3 class="mb-4">{{problem_title}}</h3>
+        <p class="lead">{{problem_description}}</p>
+        <p>Problem ID: {{problem_id}}</p>
+        <a href="{% url 'execute'%}" class="btn btn-primary">Start Solving</a>
+      </div>
+    </div>
+  </div>
+{% endblock %}

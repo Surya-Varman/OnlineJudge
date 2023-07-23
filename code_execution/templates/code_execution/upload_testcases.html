@@ -1,16 +1,36 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Title</title>
-</head>
-<body>
-    <form method="POST">
-        {%csrf_token%}
-        <input name= "problem_id" placeholder="problem id"/> <br/> <br/>
-        <textarea name = "testcase" placeholder="testcase" rows="4" cols="50"> </textarea> <br/>
-        <textarea name = "output" placeholder="output" rows="4" cols="50"> </textarea> <br/>
-        <input type="submit"/>
-    </form>
-</body>
-</html>
+{% extends "users/base.html" %}
+{% block content %}
+    <div class="container mt-5">
+        <div class="row justify-content-center">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="text-center">Testcase Form</h3>
+                    </div>
+                    <div class="card-body">
+                        <form method="POST">
+                            {% csrf_token %}
+                            <div class="form-group">
+                                <label for="problem_id">Problem ID</label>
+                                <input type="text" class="form-control" id="problem_id" name="problem_id" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="testcase">Testcase</label>
+                                <textarea class="form-control" id="testcase" name="testcase" rows="4" cols="50"
+                                    placeholder="testcase" required></textarea>
+                            </div>
+                            <div class="form-group">
+                                <label for="output">Output</label>
+                                <textarea class="form-control" id="output" name="output" rows="4" cols="50"
+                                    placeholder="output" required></textarea>
+                            </div>
+                            <div class="form-group text-center pt-2">
+                                <button type="submit" class="btn btn-primary">Submit</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
