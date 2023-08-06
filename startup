@@ -1,0 +1,3 @@
+celery -A onlinejudge worker -l info --pool=solo
+docker run -p 6379:6379 redis
+python manage.py runserver
