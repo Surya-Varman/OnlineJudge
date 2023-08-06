@@ -2,8 +2,10 @@ from django.shortcuts import render
 from django.http import HttpResponse
 from django.contrib import messages
 from code_execution.models import Problem as Problems, TestCase, Submission
-from code_execution.helper import compiler_details, get_extension, docker_init, create_testcase_file, delete_docker_container
+from code_execution.helper import compiler_details, get_extension, docker_init, create_testcase_file, \
+    delete_docker_container
 from django.db.models import Q
+from django.contrib.auth.decorators import login_required
 import os
 import subprocess
 import docker
@@ -15,6 +17,7 @@ OLD_PATH = os.getcwd()
 TESTCASE_PATH = os.getcwd() + "/testcases"
 
 
+@login_required(login_url="/users/login")
 def execute_code(request):
     if not os.path.exists(FOLDER_PATH):
         os.makedirs(FOLDER_PATH)
@@ -142,5 +145,6 @@ def show_problem(request):
 
 def view_problem(request, problem_id):
     problem = Problems.objects.get(problem_id=problem_id)
-    return render(request,"code_execution/problem_description.html", {"problem_title": problem.problem_title, "problem_description": problem.problem_statement, "problem_id":problem_id})
-
+    return render(request, "code_execution/problem_description.html",
+                  {"problem_title": problem.problem_title, "problem_description": problem.problem_statement,
+                   "problem_id": problem_id})
